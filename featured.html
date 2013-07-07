@@ -1,0 +1,85 @@
+<head>
+	<title>Got Features?</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href='http://fonts.googleapis.com/css?family=Kite%20One' rel='stylesheet' type='text/css'>
+	<script>
+		function redisplayDiffTimes() {
+			$('span[data-time]').each(function (index, value) {
+				this.innerText = formatDate(parseInt(value.getAttribute('data-time')));
+			});
+		}
+		$(function () {
+			window.setInterval(redisplayDiffTimes, 10000);
+		});
+	</script>
+</head>
+
+<body>
+	{{> header }}
+	<div class="container-fluid" style="padding-top: 1.5em">
+		{{> controls }}
+		<div class="well">
+			{{> features }}
+		</div>
+	</div>
+</body>
+
+<template name="header">
+	<div>
+		{{loginButtons}}
+	</div>
+</template>
+
+<template name="feature-new">
+	<div class="well">
+		{{author.profile.name}}
+	</div>
+	<fieldset>
+		<div class="check-item">
+			<input type="checkbox" name="estimates" {{ checked 'estimates' }} />
+			<label for="estimates">Estimates are entered into tracking software</label>
+		</div>
+	</fieldset>
+</template>
+
+<template name="controls">
+	<h1>Got Features?</h1>
+	{{#if currentUser}}
+		<label for="feature-name">New Feature Name</label>
+		<input type="text" name="feature-name" />
+
+		<input type="button" value="Click" />
+	{{/if}}
+</template>
+
+<template name="features">
+{{#if features}}
+<ul class="unstyled">
+	{{#each features}}
+		{{> feature}}
+	{{/each}}
+</ul>
+{{else}}
+	No active features.
+{{/if}}
+</template>
+
+<template name="feature">
+<div class="feature" data-feature-id="{{_id}}">
+	<div class="row-fluid">
+		<div class="span1">
+			<img src="{{ getAuthorImage author }}" />{{author.profile.name}}<br/>
+		</div>
+		<div class="span6">
+			<div class="lead">
+				{{name}}
+			</div>
+			<button class="btn dock-upper-right" name="close-feature">Close</button>
+			<span class="time muted pull-right">
+				<span data-time="{{timestamp}}">{{dateRender timestamp}}</span>
+			</span>
+		</div>
+	</div>
+	{{{ renderState }}}
+</div>
+</template>

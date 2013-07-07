@@ -1,0 +1,27 @@
+/* CSS declarations go here */
+body {
+	font-family: 'Kite One'
+}
+
+.feature {
+	margin: 0 0 10px 0;
+	position: relative;
+	border: dashed 2px rgba(0, 0, 0, 0.3);
+	border-radius: 8px;
+}
+
+.feature img {
+	border-radius: 500px;
+	max-width: 64px;
+}
+
+.feature .dock-upper-right {
+	position: absolute;
+	top: 0;
+	right: 0;
+}
+
+.feature .check-item {
+	white-space: nowrap;
+	display: inline;
+}
