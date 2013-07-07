@@ -12,16 +12,16 @@ body {
 
 .feature img {
 	border-radius: 500px;
-	max-width: 64px;
+	max-width: 32px;
+
 }
 
 .feature .dock-upper-right {
 	position: absolute;
-	top: 0;
-	right: 0;
+	top: 5px;
+	right: 5px;
 }
 
-.feature .check-item {
-	white-space: nowrap;
-	display: inline;
+.feature .status {
+	color: #888855;
 }
