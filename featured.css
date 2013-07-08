@@ -1,19 +1,18 @@
 /* CSS declarations go here */
 body {
-	font-family: 'Kite One'
+	font-family: 'Glegoo'
 }
 
 .feature {
 	margin: 0 0 10px 0;
 	position: relative;
-	border: dashed 2px rgba(0, 0, 0, 0.3);
+	padding: 8px;
 	border-radius: 8px;
 }
 
 .feature img {
 	border-radius: 500px;
 	max-width: 32px;
-
 }
 
 .feature .dock-upper-right {
@@ -24,4 +23,8 @@ body {
 
 .feature .status {
 	color: #888855;
+}
+
+.feature .lead {
+	margin-bottom: 0px;
 }

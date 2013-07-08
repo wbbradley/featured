@@ -1,7 +1,7 @@
 <head>
 	<title>Got Features?</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link href='http://fonts.googleapis.com/css?family=Kite%20One' rel='stylesheet' type='text/css'>
+	<link href='http://fonts.googleapis.com/css?family=Glegoo' rel='stylesheet' type='text/css'>
 	<script>
 		function redisplayDiffTimes() {
 			$('span[data-time]').each(function (index, value) {
@@ -32,9 +32,6 @@
 </div>
 </template>
 
-<template name="feature-update">
-</template>
-
 <template name="controls">
 	<h1>Got Features?</h1>
 	{{#if currentUser}}
@@ -60,47 +57,75 @@
 	<div class="lead">
 		{{name}}
 	</div>
-	{{#if currentUser}}
-		<button class="btn dock-upper-right" name="close-feature">Close</button>
-	{{else}}
-		<img class="dock-upper-right" src="{{ getAuthorImage author }}" /><!--{{author.profile.name}}-->
-	{{/if}}
 	<div class="row-fluid">
-		<span class="status">{{status this}}</span>
-		<span class="muted pull-right">
-			Created: <span data-time="{{timestamp}}">{{dateRender timestamp}}</span>
-		</span>
-	</div>
-
-	<fieldset class="well">
-		{{#if currentUser }}
-		<!-- editable -->
-		{{else}}
-		<div>
-		{{/if}}
-		{{#items this}}
-			{{#if currentUser }}
-			<label class="checkbox">
-				<input type="checkbox" name="{{ name }}" {{ checked name }} />
-				{{ description }} 
-			</label>
+		<div class="span6">
+			<small>Owner: {{owner.profile.name}}</small>
+			{{#if currentUser}}
+				<button class="btn dock-upper-right" name="close-feature">Close</button>
 			{{else}}
-			<div>
-			{{#if checked }}
-				<i class="icon-ok"></i>
-				<span style="color:#88CC88">{{ description }}</span>
-			{{else}}
-				<i class="icon-remove"></i>
-				<span style="color:#880000">{{ description }}</span>
+				<img class="dock-upper-right" src="{{ getAuthorImage owner }}" /><!--{{owner.profile.name}}-->
 			{{/if}}
+			<div class="row-fluid">
+				<span class="status">In <bold>{{status this}}</bold></span>
+				<span class="muted pull-right">
+					Created: <span data-time="{{timestamp}}">{{dateRender timestamp}}</span>
+				</span>
 			</div>
-			{{/if}}
-		{{/items}}
-		{{#if currentUser }}
-			<!-- end editable -->
-		{{else}}
+
 		</div>
-		{{/if}}
-	</fieldset>
+		<div class="span6">
+			{{#if stakeholder}}
+				<small>Stakeholder: {{ stakeholder.profile.name }}</small>
+			{{else}}
+				<button class="btn btn-small" name="feature-stakeholder-grab">Become the Stakeholder</button>
+			{{/if}}
+		</div>
+	</div>
+	<div class="row-fluid">
+		<div class="span6">
+			<fieldset class="well">
+				{{#ownerItems this}}
+					{{#ifOwner this }}
+						<label class="checkbox">
+							<input type="checkbox" name="{{ name }}" {{ checked name }} />
+							{{ description }} 
+						</label>
+					{{else}}
+						<div>
+							{{#if checked }}
+								<i class="icon-ok"></i>
+								<span style="color:#88CC88">{{ description }}</span>
+							{{else}}
+								<i class="icon-remove"></i>
+								<span style="color:#880000">{{ description }}</span>
+							{{/if}}
+						</div>
+					{{/ifOwner}}
+				{{/ownerItems}}
+			</fieldset>
+		</div>
+		<div class="span6">
+			<fieldset class="well">
+				{{#stakeholderItems this}}
+					{{#ifStakeholder this}}
+						<label class="checkbox">
+							<input type="checkbox" name="{{ name }}" {{ checked name }} />
+							{{ description }} 
+						</label>
+					{{else}}
+						<div>
+						{{#if checked }}
+							<i class="icon-ok"></i>
+							<span style="color:#88CC88">{{ description }}</span>
+						{{else}}
+							<i class="icon-remove"></i>
+							<span style="color:#880000">{{ description }}</span>
+						{{/if}}
+						</div>
+					{{/ifStakeholder}}
+				{{/stakeholderItems}}
+			</fieldset>
+		</div>
+	</div>
 </div>
 </template>

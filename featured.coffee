@@ -57,41 +57,87 @@ if Meteor.isClient
   checked = (el) ->
     return $(el)?.prop('checked')
 
-  featureStates =
-    requirements:
-      next: 'design'
-      desc: 'This feature is in Requirements Gathering'
-      items:
-        owners: 'Dev Owner of the feature has been established'
-        stakeholders: 'Key Stakeholders of the feature have been established.'
-        requirements: 'Requirements have been gathered'
-        targetDateReq: 'A rough target date has been agreed upon between the stakeholders and the owner'
-    design:
-      next: 'preCoding'
-      desc: 'This feature is in Design'
-      items:
-        design: 'UX Design has been assembled.'
-        assetsReq: 'Visual requirements or other required assets have been identified'
-        deliverable: 'Requirements have been gathered from are entered into tracking software'
-        estimates: 'Estimates are entered into tracking software'
-        approval: 'Design is approved by stakeholders'
-        targetDateDesign: 'A clearly defined target date range has been agreed upon between the stakeholders and the owner'
-    preCoding:
-      next: 'inProgress'
-      desc: 'This feature is Pre-Coding iteration'
-      items:
-        assetsInMotion: 'Non-code asset gathering is underway.'
-        stakeholdersDesign: 'Key Stakeholders of the feature have been established.'
+  Workflow =
+    Roles:
+      Owner:
+        name: 'Dev'
+        desc: 'Development owner of the feature'
+      Stakeholder:
+        name: 'Biz Buddy'
+        desc: 'Person assigned to ensure product value and market readiness'
 
-    inProgress:
-      next: 'complete'
-      desc: 'Coding is ongoing on this feature.'
-      items:
-        tested: 'You have run all tests in staging'
-        published: 'The feature is live'
-    complete:
-      next: undefined
-      desc: 'This feature is in the hands of its target audience.'
+    States:
+      requirements:
+        desc: 'Requirements Gathering'
+        itemsByRole:
+          Owner:
+            owner: 'Dev Owner of the feature has been established'
+            stakeholder: 'Key Stakeholders of the feature have been established.'
+            requirements: 'Requirements have been gathered'
+            targetDateReq: 'A target date is established'
+          Stakeholder:
+            established: 'You accept responsibility for ensuring this feature aligns with positive business value'
+            targetDateReqApproved: 'You approve of the target date but understand it may change due to future events'
+        next: 'design'
+
+      design:
+        desc: 'Design'
+        itemsByRole:
+          Owner:
+            design: 'UX Design has been assembled.'
+            assetsReq: 'Visual requirements or other required assets have been identified'
+            deliverable: 'Requirements have been gathered from are entered into tracking software'
+            estimates: 'Estimates are entered into tracking software'
+            techSanity: 'You have convinced another dev that your estimates are sane'
+            approval: 'Design is approved by stakeholders'
+            targetDateDesign: 'A firm date has been identified for this deliverable'
+          Stakeholder:
+            designApproved: 'User Experience design (wireframe, etc...) is approved'
+            assetsApproved: 'Visual goals (graphics, fonts, colors, etc...) are approved'
+            valueProp: 'You understand the value proposition of aiming for this deliverable'
+            targetDateDesignApproved: 'A clearly defined target date range has been agreed upon between the stakeholders and the owner'
+        next: 'preCoding'
+
+      preCoding:
+        desc: 'Precoding Iteration'
+        itemsByRole:
+          Owner:
+            assetsInMotion: 'Non-code asset gathering is underway.'
+            stakeholdersDesign: 'Key Stakeholders of the feature have been established.'
+          Stakeholder:
+            understanding: 'You have a firm grasp of what the outcome of this project will be'
+            targetDate: 'You have a firm grasp of when the deliverable will be ready'
+        next: 'inProgress'
+
+      inProgress:
+        desc: 'Coding'
+        itemsByRole:
+          Owner:
+            tested: 'You have run all tests in staging'
+            published: 'The feature is live'
+          Stakeholder: {}
+        next: 'testing'
+
+      testing:
+        desc: 'Coding'
+        itemsByRole:
+          Owner:
+            tested: 'You have run all tests in staging'
+            published: 'The feature is live'
+          Stakeholder: {}
+        next: 'complete'
+
+      complete:
+        desc: 'Production'
+        next: undefined
+        itemsByRole:
+          Owner:
+            highfiveBiz: 'You have high-fived your biz-buddy'
+          Stakeholder:
+            highfiveDev: 'You have high-fived your dev-buddy'
+
+    Config:
+      startState: 'requirements'
 
   updateCheckbox = (event) ->
     feature = getFeature event.target
@@ -100,13 +146,14 @@ if Meteor.isClient
     feature.items = feature.items or {}
     feature.items[event.target.name] = checked(event.target)
     complete = true
-    for item of featureStates[feature.state].items
-      if not item of feature.items or not feature.items[item]
-        complete = false
-        break
+    for role, items of Workflow.States[feature.state].itemsByRole
+      for item of items
+        if not feature.items[item]
+          complete = false
+          break
 
     if complete
-      feature.state = featureStates[feature.state].next
+      feature.state = Workflow.States[feature.state].next
 
     Features.update feature._id,
       $set: _.omit feature, '_id'
@@ -123,33 +170,53 @@ if Meteor.isClient
 
   Template.feature.events events
 
+  @itemsHelperMaker = (role) ->
+    (context, options) ->
+      if not @_id or not @owner
+        throw new Error "This doesn't look like a feature"
+      ret = ''
+      console.log "Looking for #{@state}"
+      if not @state of Workflow.States
+        throw new Error "Invalid state '#{@state}' found"
+      for item_name, item_description of Workflow.States[@state].itemsByRole[role]
+        checked_state = ''
+        try
+          if @items[item_name]
+            checked_state = 'checked="checked"'
+        catch e
+        finally
+        ret = ret + options.fn
+          name: item_name
+          description: item_description
+          checked: checked_state
+          ownerId: @owner?._id
+          stakeholderId: @stakeholder?._id
+      return ret
+
   Template.feature.helpers
+    user: () ->
+      Meteor.user()
+
     status: () ->
-      featureStates[@state].desc
+      Workflow.States[@state].desc
 
     dateRender: (timestamp) ->
       formatDate(timestamp)
 
-    ifChecked: (item_name, options) ->
-      if item_name of @items and @items[item_name]
+    ownerItems: itemsHelperMaker 'Owner'
+    stakeholderItems: itemsHelperMaker 'Stakeholder'
+
+    ifOwner: (context, options) ->
+      if Meteor.user()._id is @ownerId
         return options.fn @
       else
         return options.inverse @
 
-    items: (context, options) ->
-      if not @_id or not @author
-        throw new Error "This doesn't look like a feature"
-      ret = ''
-      console.log "Looking for #{@state}"
-      if not @state of featureStates
-        throw new Error "Invalid state '#{@state}' found"
-      for item_name, item_description of featureStates[@state].items
-        console.log "rendering feature #{@name} item #{item_name}"
-        ret = ret + options.fn
-          name: item_name
-          description: item_description
-          checked: if (item_name of @items and @items[item_name]) then 'checked="checked"' else ''
-      return ret
+    ifStakeholder: (context, options) ->
+      if Meteor.user()._id is @stakeholderId
+        return options.fn @
+      else
+        return options.inverse @
 
     getAuthorImage: (author) ->
       if author.services.twitter
@@ -178,16 +245,17 @@ if Meteor.isClient
       feature =
         name: name
         timestamp: Date.now()
-        author: Meteor.user()
-        state: 'requirements'
+        owner: Meteor.user()
+        state: Workflow.Config.startState
         items: {}
       Features.insert feature, (obj, _id) ->
         if typeof obj is 'undefined'
           log 'info', "feature logged '#{_id}'"
         else
           log 'warning', 'error inserting a new feature'
+
   @Features = Features
-  @featureStates = featureStates
+  @Workflow = Workflow
   @formatDate = formatDate
   @dumpColl = dumpColl
 
@@ -196,18 +264,24 @@ if Meteor.isClient
 
 
 if Meteor.isServer
+
+  # Set up settings around user validation
   if not Meteor.settings.validDomain
     console.log "!!! Unabled to find Meteor.settings.validDomain"
+
+  Meteor.settings.whitelist = ([].concat Meteor.settings.whitelist).sort()
 
   endsWith = (string, suffix) ->
       string.indexOf(suffix, string.length - suffix.length) isnt -1
 
   validUserByEmail = (user) ->
-    if user?.services?.google?.email
-      if endsWith user.services.google.email, ('@' + Meteor.settings.validDomain)
+    email = user?.services?.google?.email
+    if email
+      if endsWith email, "@#{Meteor.settings.validDomain}"
         return true
-    else
-      return false
+      if (_.indexOf Meteor.settings.whitelist, email, true) isnt -1
+        return true
+    return false
 
   # Setup security features
   Meteor.users.deny
@@ -215,12 +289,12 @@ if Meteor.isServer
       return true
 
   Meteor.publish 'features', () ->
-    console.log "Checking whether to publish for user #{@userId}"
-    if validUserByEmail Meteor.users.findOne @userId
-      console.log "Yep. Publishing to user #{@userId}"
+    user = Meteor.users.findOne @userId
+    if validUserByEmail user
+      console.log "Publishing to user #{user.profile.name} <#{user.services.google.email}>"
       return Features.find()
     else
-      console.log "Nope. Not going to publish to user #{@userId}"
+      console.log "Not publishing to user #{user.profile.name} <#{user.services.google.email}>"
       return undefined
 
   Accounts.validateNewUser (user) ->
@@ -230,15 +304,10 @@ if Meteor.isServer
 
   Features.allow
     insert: (userId, doc) ->
-      console.log "Checking #{userId}"
       return validUserByEmail Meteor.users.findOne userId
     update: (userId, doc, fieldNames, modifier) ->
-      console.log "Checking #{userId}"
-      valid = validUserByEmail Meteor.users.findOne userId
-      console.log "update valid #{valid}"
-      return valid
+      return validUserByEmail Meteor.users.findOne userId
     remove: (userId, doc) ->
-      console.log "Checking #{userId}"
       return validUserByEmail Meteor.users.findOne userId
 
   Meteor.startup ->
