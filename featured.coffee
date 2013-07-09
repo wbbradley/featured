@@ -74,10 +74,16 @@ if Meteor.isClient
             owner: 'Dev Owner of the feature has been established'
             stakeholder: 'Key Stakeholders of the feature have been established.'
             requirements: 'Requirements have been gathered'
+            mvp: 'Minimum viable product has been presented'
+            successOwner: 'Success is well understood'
             targetDateReq: 'A target date is established'
           Stakeholder:
-            established: 'You accept responsibility for ensuring this feature aligns with positive business value'
-            targetDateReqApproved: 'You approve of the target date but understand it may change due to future events'
+            established: 'This feature aligns with positive business value'
+            goals: 'You understand and have expressed clearly the goals of the feature'
+            mvpApproval: 'Minimum viable product has been approved'
+            nongoals: 'You understand and have expressed clearly the non-goals of the feature'
+            successStakeholder: 'Success is well understood'
+            targetDateReqApproved: 'Target date makes sense but understand it may still change'
         next: 'design'
 
       design:
@@ -143,7 +149,7 @@ if Meteor.isClient
     feature = getFeature event.target
     if not feature
       throw new Error "Can't find feature from event.target"
-    feature.items = feature.items or {}
+    feature.items or= {}
     feature.items[event.target.name] = checked(event.target)
     complete = true
     for role, items of Workflow.States[feature.state].itemsByRole
@@ -158,6 +164,17 @@ if Meteor.isClient
     Features.update feature._id,
       $set: _.omit feature, '_id'
 
+  becomeStakeholder = (event) ->
+    feature = getFeature event.target
+    if not feature
+      throw new Error "Can't find feature from event.target"
+    userId = Meteor.user()._id
+    if feature.stakeholderIds.indexOf(userId) is -1
+      feature.stakeholderIds.push userId
+
+    Features.update feature._id,
+      $set: _.omit feature, '_id'
+
   Template.features.features = ->
     Features.find {}, {sort: {timestamp: -1}}
 
@@ -167,15 +184,15 @@ if Meteor.isClient
       feature = getFeature event.target
       Features.remove feature._id
     'change input[type=checkbox]': updateCheckbox
+    'click button[name=feature-stakeholder-grab]': becomeStakeholder
 
   Template.feature.events events
 
   @itemsHelperMaker = (role) ->
     (context, options) ->
-      if not @_id or not @owner
+      if not @_id or not @ownerId
         throw new Error "This doesn't look like a feature"
       ret = ''
-      console.log "Looking for #{@state}"
       if not @state of Workflow.States
         throw new Error "Invalid state '#{@state}' found"
       for item_name, item_description of Workflow.States[@state].itemsByRole[role]
@@ -189,13 +206,20 @@ if Meteor.isClient
           name: item_name
           description: item_description
           checked: checked_state
-          ownerId: @owner?._id
-          stakeholderId: @stakeholder?._id
+          ownerId: @ownerId
+          stakeholderIds: @stakeholderIds
       return ret
 
   Template.feature.helpers
     user: () ->
       Meteor.user()
+
+    username: (userId) ->
+      user = Meteor.users.findOne userId
+      if user
+        return user.profile.name
+      else
+        return '<Unknown>'
 
     status: () ->
       Workflow.States[@state].desc
@@ -213,7 +237,7 @@ if Meteor.isClient
         return options.inverse @
 
     ifStakeholder: (context, options) ->
-      if Meteor.user()._id is @stakeholderId
+      if @stakeholderIds.indexOf(Meteor.user()._id) isnt -1
         return options.fn @
       else
         return options.inverse @
@@ -245,7 +269,8 @@ if Meteor.isClient
       feature =
         name: name
         timestamp: Date.now()
-        owner: Meteor.user()
+        ownerId: Meteor.user()._id
+        stakeholderIds: []
         state: Workflow.Config.startState
         items: {}
       Features.insert feature, (obj, _id) ->
@@ -261,6 +286,7 @@ if Meteor.isClient
 
   # Finally, subscribe to the features collection
   Meteor.subscribe 'features'
+  Meteor.subscribe 'users'
 
 
 if Meteor.isServer
@@ -279,7 +305,7 @@ if Meteor.isServer
     if email
       if endsWith email, "@#{Meteor.settings.validDomain}"
         return true
-      if (_.indexOf Meteor.settings.whitelist, email, true) isnt -1
+      if _.indexOf(Meteor.settings.whitelist, email, true) isnt -1
         return true
     return false
 
@@ -288,13 +314,18 @@ if Meteor.isServer
     update: () ->
       return true
 
+  Meteor.publish 'users', () ->
+    user = Meteor.users.findOne @userId
+    if validUserByEmail user
+      return Meteor.users.find()
+    else
+      return undefined
+
   Meteor.publish 'features', () ->
     user = Meteor.users.findOne @userId
     if validUserByEmail user
-      console.log "Publishing to user #{user.profile.name} <#{user.services.google.email}>"
       return Features.find()
     else
-      console.log "Not publishing to user #{user.profile.name} <#{user.services.google.email}>"
       return undefined
 
   Accounts.validateNewUser (user) ->
