@@ -63,8 +63,8 @@ if Meteor.isClient
         name: 'Dev'
         desc: 'Development owner of the feature'
       Stakeholder:
-        name: 'Biz Buddy'
-        desc: 'Person assigned to ensure product value and market readiness'
+        name: 'Stakeholder'
+        desc: 'Person assigned to ensure product value, usability and market readiness'
 
     States:
       requirements:
@@ -94,6 +94,7 @@ if Meteor.isClient
             assetsReq: 'Visual requirements or other required assets have been identified'
             deliverable: 'Requirements have been gathered from are entered into tracking software'
             estimates: 'Estimates are entered into tracking software'
+            testGoalsSet: "Test goals have been established and shared"
             techSanity: 'You have convinced another dev that your estimates are sane'
             approval: 'Design is approved by stakeholders'
             targetDateDesign: 'A firm date has been identified for this deliverable'
@@ -119,18 +120,36 @@ if Meteor.isClient
         desc: 'Coding'
         itemsByRole:
           Owner:
-            tested: 'You have run all tests in staging'
+            testsWritten: "You met testing goals around this product"
+            demoed: 'Code is complete and has been demoed to at least one stakeholder'
+            cleanup: 'You removed excess print statements, and DEBUG code'
             published: 'The feature is live'
-          Stakeholder: {}
-        next: 'testing'
+          Stakeholder:
+            seenDemo: 'You reviewed the complete product either on the staging server, or on the developer\'s computer'
+        next: 'preProduction'
 
-      testing:
-        desc: 'Coding'
+      preProduction:
+        desc: 'Go Mode'
         itemsByRole:
           Owner:
-            tested: 'You have run all tests in staging'
+            merged: "You merged the target branch (master) into your branch"
+            codeReview: "You had a final code review"
+            finalDemo: "You completed a final demo"
+          Stakeholder:
+            seenFinalDemo: 'You reviewed the complete product either on the staging server, or on the developer\'s computer'
+
+      production:
+        desc: 'Go Mode'
+        itemsByRole:
+          Owner:
+            merged: "You've merged the target branch (master) into your branch"
+            codeReview: "You've had a final code review"
+            finalDemo: "You've completed a final demo"
+            pushToProduction: "Pushed code to production"
             published: 'The feature is live'
-          Stakeholder: {}
+            liveTest: "You've run through your test matrix with the live production code"
+          Stakeholder:
+            seenLive: "You\'ve reviewed the live changes"
         next: 'complete'
 
       complete:
@@ -193,6 +212,8 @@ if Meteor.isClient
       if not @_id or not @ownerId
         throw new Error "This doesn't look like a feature"
       ret = ''
+      if @state is undefined
+        return ""
       if not @state of Workflow.States
         throw new Error "Invalid state '#{@state}' found"
       for item_name, item_description of Workflow.States[@state].itemsByRole[role]
@@ -214,6 +235,16 @@ if Meteor.isClient
     user: () ->
       Meteor.user()
 
+    progress: () ->
+      count = 0
+      total = 0
+      for state_name, state_desc of Workflow.States
+        for role, items of state_desc.itemsByRole
+          for name of items
+            total = total + 1
+            if @items[name]
+              count = count + 1
+      return "#{Math.floor(count * 100 / total)}%"
     username: (userId) ->
       user = Meteor.users.findOne userId
       if user
@@ -222,7 +253,7 @@ if Meteor.isClient
         return '<Unknown>'
 
     status: () ->
-      Workflow.States[@state].desc
+      Workflow.States[@state]?.desc or ""
 
     dateRender: (timestamp) ->
       formatDate(timestamp)

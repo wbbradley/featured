@@ -1,7 +1,7 @@
 <head>
 	<title>Got Features?</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link href='http://fonts.googleapis.com/css?family=Glegoo' rel='stylesheet' type='text/css'>
+	<link href='http://fonts.googleapis.com/css?family=Kite+One' rel='stylesheet' type='text/css'>
 	<script>
 		function redisplayDiffTimes() {
 			$('span[data-time]').each(function (index, value) {
@@ -70,7 +70,7 @@
 <template name="feature">
 <div class="feature" data-feature-id="{{_id}}">
 	<div class="lead">
-		{{name}}
+		{{name}} - {{progress}} complete
 	</div>
 	<div class="row-fluid">
 		<div class="span6">
@@ -115,7 +115,7 @@
 				{{#ownerItems this}}
 					{{#ifOwner this }}
 						<label class="checkbox">
-							<input type="checkbox" name="{{ name }}" {{ checked name }} />
+							<input type="checkbox" name="{{ name }}" {{ checked }} />
 							{{ description }} 
 						</label>
 					{{else}}
